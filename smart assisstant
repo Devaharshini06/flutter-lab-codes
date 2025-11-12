@@ -1,0 +1,268 @@
+// Smart Assistant app in Flutter
+// Save this as lib/main.dart
+// Add to pubspec.yaml dependencies:
+//   flutter:
+//     sdk: flutter
+//   shared_preferences: ^2.1.1
+
+import 'package:flutter/material.dart';
+import 'dart:math';
+
+void main() => runApp(const SmartAssistantApp());
+
+class SmartAssistantApp extends StatelessWidget {
+  const SmartAssistantApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Smart Student Assistant',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
+      ),
+      home: const SmartAssistantHome(),
+    );
+  }
+}
+
+class SmartAssistantHome extends StatefulWidget {
+  const SmartAssistantHome({super.key});
+
+  @override
+  State<SmartAssistantHome> createState() => _SmartAssistantHomeState();
+}
+
+class _SmartAssistantHomeState extends State<SmartAssistantHome> {
+  int _selectedPage = 0;
+
+  // Controllers for grade predictor
+  final _mark1 = TextEditingController();
+  final _mark2 = TextEditingController();
+  final _mark3 = TextEditingController();
+  String _gradeResult = "";
+
+  // Motivational quotes
+  final List<String> _quotes = [
+    "Push yourself, because no one else will do it for you.",
+    "Dream big. Work hard. Stay humble.",
+    "Every expert was once a beginner.",
+    "AI won’t replace you. A person using AI will.",
+    "The secret of getting ahead is getting started."
+  ];
+  String _currentQuote = "";
+
+  void _showQuote() {
+    final rand = Random();
+    setState(() {
+      _currentQuote = _quotes[rand.nextInt(_quotes.length)];
+    });
+  }
+
+  void _predictGrade() {
+    double m1 = double.tryParse(_mark1.text) ?? 0;
+    double m2 = double.tryParse(_mark2.text) ?? 0;
+    double m3 = double.tryParse(_mark3.text) ?? 0;
+    double avg = (m1 + m2 + m3) / 3;
+
+    String grade;
+    if (avg >= 90) grade = "A+ (Excellent)";
+    else if (avg >= 75) grade = "A (Very Good)";
+    else if (avg >= 60) grade = "B (Good)";
+    else if (avg >= 40) grade = "C (Needs Improvement)";
+    else grade = "F (Fail)";
+
+    setState(() {
+      _gradeResult = "AI Predicted Grade: $grade";
+    });
+  }
+
+  Widget _buildHomePage() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.school, size: 80, color: Colors.indigo),
+          const SizedBox(height: 20),
+          const Text(
+            "Smart Student Assistant",
+            style: TextStyle(
+                fontSize: 24, fontWeight: FontWeight.bold, color: Colors.indigo),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            "Your mini AI-powered helper!",
+            style: TextStyle(fontSize: 16, color: Colors.black54),
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton.icon(
+            onPressed: () => setState(() => _selectedPage = 1),
+            icon: const Icon(Icons.analytics),
+            label: const Text("AI Grade Predictor"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: () => setState(() => _selectedPage = 2),
+            icon: const Icon(Icons.format_quote),
+            label: const Text("Motivational Quotes"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGradePage() {
+    return Center(
+      child: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 350),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                "AI Grade Predictor",
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _mark1,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Subject 1 Marks",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _mark2,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Subject 2 Marks",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _mark3,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Subject 3 Marks",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _predictGrade,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text("Predict Grade"),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                _gradeResult,
+                style: const TextStyle(
+                    fontSize: 18,
+                    color: Colors.indigo,
+                    fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: () => setState(() => _selectedPage = 0),
+                child: const Text("⬅ Back to Home"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuotePage() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "Daily Motivation 💪",
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo),
+            ),
+            const SizedBox(height: 30),
+            Container(
+              padding: const EdgeInsets.all(16),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _currentQuote.isEmpty
+                    ? "Tap below to get inspired!"
+                    : _currentQuote,
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(fontSize: 16, color: Colors.black87),
+              ),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton.icon(
+              onPressed: _showQuote,
+              icon: const Icon(Icons.lightbulb_outline),
+              label: const Text("Generate Quote"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () => setState(() => _selectedPage = 0),
+              child: const Text("⬅ Back to Home"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.indigo.shade50,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: IndexedStack(
+              index: _selectedPage,
+              children: [
+                _buildHomePage(),
+                _buildGradePage(),
+                _buildQuotePage(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
