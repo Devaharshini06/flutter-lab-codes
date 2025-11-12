@@ -1,0 +1,213 @@
+// Simple Budget Splitter App in Flutter
+// Save this as lib/main.dart
+// Add to pubspec.yaml dependencies:
+//   flutter:
+//     sdk: flutter
+//   shared_preferences: ^2.1.1
+
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+void main() {
+  runApp(const BudgetSplitApp());
+}
+
+class BudgetSplitApp extends StatelessWidget {
+  const BudgetSplitApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Budget Splitter',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(primarySwatch: Colors.teal),
+      home: const BudgetHomePage(),
+    );
+  }
+}
+
+class BudgetHomePage extends StatefulWidget {
+  const BudgetHomePage({super.key});
+
+  @override
+  State<BudgetHomePage> createState() => _BudgetHomePageState();
+}
+
+class _BudgetHomePageState extends State<BudgetHomePage> {
+  // The _totalController was declared but not used in the application.
+  // The total is calculated dynamically from the expenses map.
+  // final TextEditingController _totalController = TextEditingController();
+  final TextEditingController _memberController = TextEditingController();
+  List<String> members = [];
+  Map<String, double> expenses = {};
+  double total = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedMembers = prefs.getStringList('members') ?? [];
+    final savedExpenses = prefs.getString('expenses');
+
+    if (savedMembers.isNotEmpty) {
+      setState(() {
+        members = savedMembers;
+        expenses = savedExpenses != null
+            ? Map<String, double>.from(json.decode(savedExpenses))
+            : {};
+      });
+    }
+  }
+
+  Future<void> _saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('members', members);
+    await prefs.setString('expenses', json.encode(expenses));
+  }
+
+  void _addMember() {
+    final name = _memberController.text.trim();
+    if (name.isNotEmpty && !members.contains(name)) {
+      setState(() {
+        members.add(name);
+        expenses[name] = 0;
+        _memberController.clear();
+      });
+      _saveData();
+    }
+  }
+
+  void _setExpense(String name) {
+    final controller = TextEditingController(
+        text: expenses[name]?.toStringAsFixed(2) ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Enter amount for $name'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(hintText: 'Amount'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text);
+              if (val != null) {
+                setState(() {
+                  expenses[name] = val;
+                });
+                _saveData();
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _calculateSplit() {
+    total = expenses.values.fold(0, (a, b) => a + b);
+    final perPerson = members.isEmpty ? 0 : total / members.length;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Split Summary'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Total: ₹${total.toStringAsFixed(2)}'),
+            const SizedBox(height: 8),
+            Text('Each person should pay: ₹${perPerson.toStringAsFixed(2)}'),
+            const SizedBox(height: 12),
+            ...members.map((m) {
+              final paid = expenses[m] ?? 0;
+              final balance = paid - perPerson;
+              return Text('$m: ${balance >= 0 ? 'Gets' : 'Owes'} ₹${balance.abs().toStringAsFixed(2)}');
+            }),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+        ],
+      ),
+    );
+  }
+
+  void _resetAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    setState(() {
+      members.clear();
+      expenses.clear();
+      total = 0;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Budget Splitter'),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _resetAll),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _memberController,
+              decoration: InputDecoration(
+                labelText: 'Add member',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: _addMember,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ListView.builder(
+                itemCount: members.length,
+                itemBuilder: (context, index) {
+                  final m = members[index];
+                  return Card(
+                    child: ListTile(
+                      title: Text(m),
+                      subtitle: Text('Spent: ₹${(expenses[m] ?? 0).toStringAsFixed(2)}'),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _setExpense(m),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _calculateSplit,
+              style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+              child: const Text('Calculate Split'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
